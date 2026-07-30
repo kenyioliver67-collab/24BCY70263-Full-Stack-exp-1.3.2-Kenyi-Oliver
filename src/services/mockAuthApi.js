@@ -5,8 +5,9 @@
 const MOCK_SECRET = "mock-secret-key-for-learning-only";
 
 const MOCK_USERS = [
-    { id: 1, username: "alice", password: "password123", role: "user" },
-    { id: 2, username: "admin", password: "adminpass", role: "admin" },
+    { id: 1, username: "alice", password: "password123", role: "viewer" },
+    { id: 2, username: "bob", password: "editorpass", role: "editor" },
+    { id: 3, username: "admin", password: "adminpass", role: "admin" },
 ];
 
 // --- Base64URL helpers (JWT uses base64url, not plain base64) ---

@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import Login from "./components/Login";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Dashboard from "./pages/Dashboard";
+import EditorPage from "./pages/EditorPage";
+import AdminPage from "./pages/AdminPage";
+import Unauthorized from "./pages/Unauthorized";
 import { verifyToken } from "./services/mockAuthApi";
 
 function App() {
@@ -29,7 +35,6 @@ function App() {
     const handleLoginSuccess = (newToken) => {
         localStorage.setItem("jwt_token", newToken);
         setToken(newToken);
-
         const decoded = jwtDecode(newToken);
         setUser(decoded);
     };
@@ -44,31 +49,79 @@ function App() {
         return <p > Checking session... < /p>;
     }
 
-    if (!token || !user) {
-        return <Login onLoginSuccess = { handleLoginSuccess }
-        />;
+    return ( <
+        div className = "App" > {
+            user && ( <
+                nav style = {
+                    { marginBottom: "20px" } } >
+                <
+                span > Logged in as { user.username }({ user.role })— < /span> <
+                button onClick = { handleLogout } > Logout < /button> <
+                /nav>
+            )
+        }
+
+        <
+        Routes >
+        <
+        Route path = "/login"
+        element = {
+            token ? < Navigate to = "/dashboard" / > : < Login onLoginSuccess = { handleLoginSuccess }
+            />
+        }
+        />
+
+        <
+        Route path = "/dashboard"
+        element = { <
+            ProtectedRoute token = { token }
+            user = { user } >
+            <
+            Dashboard user = { user }
+            /> <
+            /ProtectedRoute>
+        }
+        />
+
+        <
+        Route path = "/editor"
+        element = { <
+            ProtectedRoute token = { token }
+            user = { user }
+            allowedRoles = {
+                ["editor", "admin"] } >
+            <
+            EditorPage user = { user }
+            /> <
+            /ProtectedRoute>
+        }
+        />
+
+        <
+        Route path = "/admin"
+        element = { <
+            ProtectedRoute token = { token }
+            user = { user }
+            allowedRoles = {
+                ["admin"] } >
+            <
+            AdminPage user = { user }
+            /> <
+            /ProtectedRoute>
+        }
+        />
+
+        <
+        Route path = "/unauthorized"
+        element = { < Unauthorized / > }
+        /> <
+        Route path = "*"
+        element = { < Navigate to = { token ? "/dashboard" : "/login" }
+            />} / >
+            <
+            /Routes> <
+            /div>
+        );
     }
 
-    return ( <
-        div className = "App" >
-        <
-        h2 > Welcome, { user.username }! < /h2> <
-        p > Role: { user.role } < /p> <
-        p > User ID: { user.sub } < /p> <
-        p > Token expires at: { new Date(user.exp * 1000).toLocaleString() } < /p> <
-        button onClick = { handleLogout } > Logout < /button>
-
-        <
-        details style = {
-            { marginTop: "20px" } } >
-        <
-        summary > Show raw token(
-            for demonstration) < /summary> <
-        p style = {
-            { wordBreak: "break-all", fontSize: "0.8em" } } > { token } < /p> <
-        /details> <
-        /div>
-    );
-}
-
-export default App;
+    export default App;
