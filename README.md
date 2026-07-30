@@ -1,70 +1,134 @@
-# Getting Started with Create React App
+# RBAC & Protected Routes
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+An extension of the JWT Auth Demo that adds **Role-Based Access Control (RBAC)**: route protection, role-scoped pages, and dynamically rendered navigation based on the logged-in user's permissions.
 
-## Available Scripts
+## Aim
 
-In the project directory, you can run:
+To implement role-based access control and secure application routes based on user permissions.
 
-### `npm start`
+## Objectives
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Understand authorization mechanisms in applications
+- Implement RBAC for access control
+- Protect routes based on user roles
+- Dynamically render UI elements based on permissions
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Features
 
-### `npm test`
+- **Three roles** — `viewer`, `editor`, `admin`, embedded in the JWT payload at login
+- **Route protection** — a reusable `ProtectedRoute` component that checks both authentication (is there a valid session?) and authorization (does this role have permission?)
+- **Role hierarchy** — higher-privilege roles can access lower-privilege pages (e.g. admin can view the editor page)
+- **Unauthorized redirect** — users attempting to access a page above their role are redirected to a dedicated `/unauthorized` page, distinct from the `/login` redirect used for unauthenticated users
+- **Dynamic navigation** — nav links only render for pages the current user's role is permitted to visit
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Tech Stack
 
-### `npm run build`
+- React.js (functional components + Hooks)
+- React Router (`react-router-dom`) for client-side routing
+- JWT-based authentication (built in the previous experiment) as the source of the user's role
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Prerequisites
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- Understanding of authentication concepts (JWT)
+- Knowledge of React routing
+- Basic understanding of user roles
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Getting Started
 
-### `npm run eject`
+```bash
+git clone https://github.com/kenyioliver67-collab/24BCY70263-Full-Stack-exp-1.3.2-Kenyi-Oliver.git
+cd 24BCY70263-Full-Stack-exp-1.3.2-Kenyi-Oliver
+npm install
+npm start
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+The app runs at [http://localhost:3000](http://localhost:3000).
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Test credentials
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+| Username | Password    | Role   |
+|----------|-------------|--------|
+| alice    | password123 | viewer |
+| bob      | editorpass  | editor |
+| admin    | adminpass   | admin  |
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Project Structure
 
-## Learn More
+```
+src/
+├── components/
+│   ├── Login.js              # Login form UI
+│   └── ProtectedRoute.js     # Route guard: checks auth + role permissions
+├── pages/
+│   ├── Dashboard.js          # Any logged-in user
+│   ├── EditorPage.js         # Editor + Admin only
+│   ├── AdminPage.js          # Admin only
+│   └── Unauthorized.js       # Shown when role check fails
+├── services/
+│   └── mockAuthApi.js        # Simulated auth server: login, JWT sign/verify
+├── App.js                    # Routes, session state, nav
+└── index.js                  # Wraps <App /> in <BrowserRouter>
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## How It Works
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Roles
 
-### Code Splitting
+Each mock user is assigned a role (`viewer`, `editor`, or `admin`), which is embedded directly in the JWT payload's `role` claim during login — no separate lookup is needed once the user is authenticated, since the role travels with the token itself.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Route Protection — `ProtectedRoute`
 
-### Analyzing the Bundle Size
+```jsx
+function ProtectedRoute({ token, user, allowedRoles, children }) {
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
 
-### Making a Progressive Web App
+  return children;
+}
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+This single component separates two distinct concerns:
+- **Authentication check** — is there a valid session at all? If not, redirect to `/login`.
+- **Authorization check** — if `allowedRoles` is specified, is the user's role included? If not, redirect to `/unauthorized`.
 
-### Advanced Configuration
+Routes that omit `allowedRoles` (like `/dashboard`) allow any authenticated user through, regardless of role.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### Route Definitions
 
-### Deployment
+| Route          | Allowed Roles           |
+|----------------|--------------------------|
+| `/dashboard`   | any logged-in user       |
+| `/editor`      | `editor`, `admin`        |
+| `/admin`       | `admin`                  |
+| `/unauthorized`| public (redirect target) |
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Dynamic UI Rendering
 
-### `npm run build` fails to minify
+The navigation bar conditionally renders links based on `user.role`:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```jsx
+{(user.role === "editor" || user.role === "admin") && (
+  <Link to="/editor">Editor Page</Link>
+)}
+{user.role === "admin" && (
+  <Link to="/admin">Admin Page</Link>
+)}
+```
+
+This means users never even see links to pages they can't access — route protection blocks the *navigation*, while this handles the *presentation*, together forming a complete RBAC experience.
+
+## Expected Outcome
+
+- Role-based access control implemented
+- Secure navigation across the application
+- UI dynamically adapts based on user role
+
+## Course Mapping
+
+- CO2 - BT2
+- CO3 - BT3
